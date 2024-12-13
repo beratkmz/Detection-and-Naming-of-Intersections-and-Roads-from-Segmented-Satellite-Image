@@ -240,6 +240,11 @@ print("Junctions:")
 for i, (x, y) in enumerate(merged_junction_points, start=1):
     print(f"N-{i} - Location: ({x}, {y})")
 
+# Sonuçları bir dosyaya kaydetmek isterseniz:
+with open("junction_points.txt", "w") as f:
+    for i, (x, y) in enumerate(merged_junction_points, start=1):
+        f.write(f"N-{i} - Location: ({x}, {y})\n")
+
 import cv2
 
 # Make a copy of the image
@@ -265,6 +270,7 @@ plt.title("Junctions Name")
 plt.axis("off")
 plt.show()
 
+
 '''
 ---------------------------------------------------------------- PARSING AND NAMING PATHS ----------------------------------------------------------
 '''
@@ -273,53 +279,76 @@ plt.show()
 8. Parsing and Naming Paths
 '''
 
-# 8.1 Creating Circles at Junctions for Masking
+# Yeşil pikselleri (0, 255, 0) siyaha çevirme
+mask_green = (final_skeleton[:, :, 1] == 255) & (final_skeleton[:, :, 0] == 0) & (final_skeleton[:, :, 2] == 0)
+final_skeleton[mask_green] = (0, 0, 0)
 
-image_path = "Photos/0.png"
-image = cv2.imread(image_path)
+# Güncellenmiş görseli kaydetmek isterseniz:
+# cv2.imwrite("updated_labeled_image.png", labeled_image)
 
-if image is None:
-    raise FileNotFoundError(f"Resim bulunamadı: {image_path}")
+# Güncellenmiş görseli gri tona çevir
+labeled_image_gray = cv2.cvtColor(final_skeleton, cv2.COLOR_BGR2GRAY)
 
-# Resmin boyutlarını al
-height, width, _ = image.shape
+# İkili bir maske oluştur (siyah ve beyaz)
+_, binary_image = cv2.threshold(labeled_image_gray, 1, 255, cv2.THRESH_BINARY)
 
-# Siyah yüzey oluştur
-black_surface = np.zeros((height, width, 3), dtype=np.uint8)
+# Connected components analizi (çizgileri isimlendirme)
+num_labels, labels_im = cv2.connectedComponents(binary_image)
 
-# Yeşil daireleri çiz
-radius = 11
-color = (255, 255, 255)  # Yeşil (BGR formatında)
-thickness = 1  # Daireyi doldur
+# Etiketleri renklendirme
+label_hue = np.uint8(179 * labels_im / np.max(labels_im))
+blank_ch = 255 * np.ones_like(label_hue)
+colored_labels = cv2.merge([label_hue, blank_ch, blank_ch])
+colored_labels = cv2.cvtColor(colored_labels, cv2.COLOR_HSV2BGR)
+colored_labels[label_hue == 0] = 0  # Arka planı siyah yap
 
-for i, (x, y) in enumerate(merged_junction_points, start=1):
-    print(f"{i}. Nokta: Daire x = {x}, y = {y}")
-    cv2.circle(black_surface, (x, y), radius, color, thickness)
+# Çizgileri isimlendirme
+for label in range(1, num_labels):  # 0 arka plandır
+    mask = np.uint8(labels_im == label) * 255
+    coords = cv2.findNonZero(mask)
+    if coords is not None:
+        x, y, w, h = cv2.boundingRect(coords)
+        center = (x + w // 2, y + h // 2)  # Merkez koordinat
+        cv2.putText(colored_labels, f"R-{label}", center, 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
-# Visualize the result
-plt.figure(figsize=(10, 5))
-plt.imshow(cv2.cvtColor(black_surface, cv2.COLOR_BGR2RGB)) 
-plt.title("Green Circles on Black Surface")
+# Sonucu görselleştir
+plt.figure(figsize=(10, 10))
+plt.imshow(cv2.cvtColor(colored_labels, cv2.COLOR_BGR2RGB))
+plt.title("Labeled Lines After Removing Green Pixels")
 plt.axis("off")
 plt.show()
 
-# 8.2 Finding Roads Starting Point with Masking
+# Yolların başlangıç ve bitiş noktalarını saklamak için bir sözlük
+line_endpoints = {}
 
-if black_surface is None or labeled_image is None:
-    raise FileNotFoundError("Görsellerden biri bulunamadı.")
+# Her bir etiket için işlem yap
+for label in range(1, num_labels):  # 0 arka plandır
+    # Etiket maskesini oluştur
+    mask = np.uint8(labels_im == label) * 255
+    coords = cv2.findNonZero(mask)  # Çizginin tüm piksel koordinatları
+    
+    if coords is not None:
+        # Minimum ve maksimum x, y değerlerini bul
+        min_x = np.min(coords[:, 0, 0])
+        min_y = np.min(coords[:, 0, 1])
+        max_x = np.max(coords[:, 0, 0])
+        max_y = np.max(coords[:, 0, 1])
+        
+        # Başlangıç ve bitiş noktalarını belirle
+        start_point = (min_x, min_y)
+        end_point = (max_x, max_y)
+        
+        # Sonuçları sakla
+        line_endpoints[f"R-{label}"] = {"start": start_point, "end": end_point}
 
-# Görsellerin aynı boyutta olduğundan emin olun
-if black_surface.shape != labeled_image.shape:
-    raise ValueError("Görseller aynı boyutta olmalı!")
+# Sonuçları yazdır
+for line, points in line_endpoints.items():
+    print(f"{line}: Başlangıç Noktası: {points['start']}, Bitiş Noktası: {points['end']}")
 
-# Ortak pikselleri bul (Her iki görüntüde de aynı renk değerine sahip olan pikseller)
-common_pixels = cv2.bitwise_and(black_surface, labeled_image)
-
-# Visualize the result
-plt.figure(figsize=(10, 5))
-plt.imshow(cv2.cvtColor(common_pixels, cv2.COLOR_BGR2RGB)) 
-plt.title("Common Pixels")
-plt.axis("off")
-plt.show()
+# Sonuçları bir dosyaya kaydetmek isterseniz:
+with open("line_endpoints.txt", "w") as f:
+    for line, points in line_endpoints.items():
+        f.write(f"{line}: Başlangıç Noktası: {points['start']}, Bitiş Noktası: {points['end']}\n")
 
 
