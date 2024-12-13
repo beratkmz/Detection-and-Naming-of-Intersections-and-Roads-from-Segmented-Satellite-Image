@@ -27,9 +27,9 @@ _, blurred_mask = cv2.threshold(blurred_mask, 127, 255, cv2.THRESH_BINARY)
 
 
 # Visualize the result
-plt.imshow(blurred_mask, cmap='gray')
-plt.title("Processed Mask")
-plt.show()
+# plt.imshow(blurred_mask, cmap='gray')
+# plt.title("Processed Mask")
+# plt.show()
 
 '''
 2. Skeletonization and Edit Segmentation with Filtering and Cleaning
@@ -45,9 +45,9 @@ skeleton = skeletonize(binary_mask).astype(np.uint8) * 255
 kernel = np.ones((5, 5), dtype=np.uint8)
 thick_skeleton = cv2.dilate(skeleton, kernel, iterations=1)
 
-plt.imshow(thick_skeleton, cmap='gray')
-plt.title("Thick Skeleton")
-plt.show()
+# plt.imshow(thick_skeleton, cmap='gray')
+# plt.title("Thick Skeleton")
+# plt.show()
 
 # 2.3 Cleaning Up False Branches
 def prune_skeleton(thick_skeleton):
@@ -75,9 +75,9 @@ if lines is not None:
         cv2.line(line_image, (x1, y1), (x2, y2), 255, 1)
 
 
-plt.imshow(line_image, cmap='gray')
-plt.title("Filtered Junctions")
-plt.show()
+# plt.imshow(line_image, cmap='gray')
+# plt.title("Filtered Junctions")
+# plt.show()
 
 
 '''
@@ -103,9 +103,9 @@ skeleton_color = cv2.cvtColor(line_image, cv2.COLOR_GRAY2BGR)
 for x, y in path_points:
     cv2.circle(skeleton_color, (x, y), 5, (255, 255, 255), -1)
 
-plt.imshow(skeleton_color)
-plt.title("Detected Path")
-plt.show()
+# plt.imshow(skeleton_color)
+# plt.title("Detected Path")
+# plt.show()
 
 '''
 ----------------------------------------------------------- JUNCTION DETECTION ---------------------------------------------------------------------
@@ -128,11 +128,11 @@ skeleton_binary = binary_image // 255  # Convert to 0 and 1 format
 skeleton_last = skeletonize(skeleton_binary).astype(np.uint8) * 255  # Back to 0-255 format
 
 # Visualize the result
-plt.figure(figsize=(8, 4))
-plt.imshow(skeleton_last, cmap='gray')  # cmap='gray' provides black and white display
-plt.title("Last Skeleton")
-plt.axis("off")
-plt.show()
+# plt.figure(figsize=(8, 4))
+# plt.imshow(skeleton_last, cmap='gray')  # cmap='gray' provides black and white display
+# plt.title("Last Skeleton")
+# plt.axis("off")
+# plt.show()
 
 
 '''
@@ -175,11 +175,11 @@ for x, y in junction_points:
     cv2.circle(skeleton_color, (x, y), 1, (0, 0, 255), -1)  
 
 # Visualize the result
-plt.figure(figsize=(10, 5))
-plt.imshow(cv2.cvtColor(skeleton_color, cv2.COLOR_BGR2RGB)) 
-plt.title("Junctions Detected")
-plt.axis("off")
-plt.show()
+# plt.figure(figsize=(10, 5))
+# plt.imshow(cv2.cvtColor(skeleton_color, cv2.COLOR_BGR2RGB)) 
+# plt.title("Junctions Detected")
+# plt.axis("off")
+# plt.show()
 
 '''
 6. Correcting Faulty Junction Detections
@@ -219,14 +219,14 @@ for x, y in merged_junction_points:
     cv2.circle(final_skeleton, (x, y), 10, (0, 255, 0), -1)  
 
 # Visualize the result
-plt.figure(figsize=(10, 5))
-plt.imshow(cv2.cvtColor(final_skeleton, cv2.COLOR_BGR2RGB))  
-plt.title("Last Junctions Result")
-plt.axis("off")
-plt.show()
+# plt.figure(figsize=(10, 5))
+# plt.imshow(cv2.cvtColor(final_skeleton, cv2.COLOR_BGR2RGB))  
+# plt.title("Last Junctions Result")
+# plt.axis("off")
+# plt.show()
 
 '''
----------------------------------------------------------------- JUNCTION AND PATH NAMING ---------------------------------------------------------------------------------------
+---------------------------------------------------------------- PARSING AND NAMING JUNCTIONS ---------------------------------------------------------------------------------------
 '''
 
 '''
@@ -266,95 +266,60 @@ plt.axis("off")
 plt.show()
 
 '''
----------------------------------------------------------BURAYA KADAR GAYET IYI CALISIYOR BUNDAN SONRA YOL ISIMLENDIRME SIKINTILI------------------------------------------------------
+---------------------------------------------------------------- PARSING AND NAMING PATHS ----------------------------------------------------------
 '''
+
 '''
 8. Parsing and Naming Paths
 '''
 
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
+# 8.1 Creating Circles at Junctions for Masking
 
-# Minimum beyaz piksel uzunluğu (örneğin 5)
-min_white_pixel_length = 25 
+image_path = "Photos/0.png"
+image = cv2.imread(image_path)
 
-# Görselleştirme için orijinal görüntüye zarar vermemek adına geçici bir kopya oluştur
-labeled_image = skeleton_color.copy()  # Eğer skeleton_color zaten renkli ise dönüşüm yapmaya gerek yok
+if image is None:
+    raise FileNotFoundError(f"Resim bulunamadı: {image_path}")
 
-# Çizgileri çizecek geçici bir görüntü
-temp_image = np.zeros_like(skeleton_color)  # Geçici görüntü, yalnızca çizgileri içerecek
+# Resmin boyutlarını al
+height, width, _ = image.shape
 
-road_labels = []
-road_counter = 0
+# Siyah yüzey oluştur
+black_surface = np.zeros((height, width, 3), dtype=np.uint8)
 
-# Junctionlar arası çizgileri çizen fonksiyon
-def draw_line_between_junctions(img, start, end):
-    """Çizilen iki junction noktası arasındaki çizgiyi img üzerine çizer."""
-    cv2.line(img, start, end, color=(255, 255, 255), thickness=1)  # Beyaz çizgi
+# Yeşil daireleri çiz
+radius = 11
+color = (255, 255, 255)  # Yeşil (BGR formatında)
+thickness = 1  # Daireyi doldur
 
-# Beyaz piksel kontrolü yapan fonksiyon
-def is_sufficient_white_pixels(img1, img2, start, end, min_length):
-    """İki görüntü arasında çizilen çizgilerde yeterli beyaz piksel olup olmadığını kontrol et."""
-    # Boş bir maske oluştur
-    mask = np.zeros_like(img1, dtype=np.uint8)
-    
-    # İki junction arasında bir çizgi çiz
-    cv2.line(mask, start, end, color=255, thickness=1)
-    
-    # AND işlemi: İki görüntüde de beyaz piksel olup olmadığını kontrol et
-    intersection = cv2.bitwise_and(img1, mask)
-    intersection = cv2.bitwise_and(intersection, img2)
-
-    # Renkli görüntüyü gri tonlamalıya dönüştür
-    gray_white_pixels = cv2.cvtColor(intersection, cv2.COLOR_BGR2GRAY)
-    
-    # Beyaz piksel sayısını hesapla
-    count = cv2.countNonZero(gray_white_pixels)
-    
-    # Eğer beyaz piksel sayısı eşik değeri aşarsa True döner
-    return count >= min_length
-
-# Tüm junctionlar arasındaki bağlantıları kontrol et
-for i, (x1, y1) in enumerate(merged_junction_points, start=1):
-    for j, (x2, y2) in enumerate(merged_junction_points[i:], start=i + 1):
-        # Çizgi çiz ve beyaz piksel kontrolü yap
-        draw_line_between_junctions(temp_image, (x1, y1), (x2, y2))
-        
-        # Eğer çizgi üzerinde yeterli beyaz piksel varsa ve skeleton_color ile kesişiyorsa
-        if is_sufficient_white_pixels(skeleton_color, temp_image, (x1, y1), (x2, y2), min_white_pixel_length):
-            # Yeterli beyaz piksel varsa, bu yolu geçerli kabul et ve isimlendir
-            road_counter += 1
-            road_label = f"R-N({i}-{j})-{road_counter}"
-            road_labels.append((road_label, ((x1 + x2) // 2, (y1 + y2) // 2)))  # Ortaya etiket ekle
-            
-            # Görselleştirme: Geçerli yolu çiz ve etiketle
-            position = ((x1 + x2) // 2 + 10, (y1 + y2) // 2 + 10)  # Ortada etiketin konumunu belirle
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            font_scale = 0.4
-            font_thickness = 1
-            color = (255, 0, 0)  # Mavi renk yol için
-            cv2.putText(labeled_image, road_label, position, font, font_scale, color, font_thickness, cv2.LINE_AA)
-
-# Junction isimlerini görselleştir
 for i, (x, y) in enumerate(merged_junction_points, start=1):
-    label = f"N-{i}"
-    position = (x + 15, y)
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 0.4
-    font_thickness = 1
-    color = (0, 255, 0)  # Yeşil renk junctionlar için
-    cv2.putText(labeled_image, label, position, font, font_scale, color, font_thickness, cv2.LINE_AA)
+    print(f"{i}. Nokta: Daire x = {x}, y = {y}")
+    cv2.circle(black_surface, (x, y), radius, color, thickness)
 
-# Sonuçları görselleştir
+# Visualize the result
 plt.figure(figsize=(10, 5))
-plt.imshow(cv2.cvtColor(labeled_image, cv2.COLOR_BGR2RGB))
-plt.title("Junctions and Valid Roads")
+plt.imshow(cv2.cvtColor(black_surface, cv2.COLOR_BGR2RGB)) 
+plt.title("Green Circles on Black Surface")
 plt.axis("off")
 plt.show()
 
-# Geçerli yolların etiketlerini yazdır
-print("Valid Road Labels:")
-for label, (mid_x, mid_y) in road_labels:
-    print(f"{label} - Location: ({mid_x}, {mid_y})")
+# 8.2 Finding Roads Starting Point with Masking
+
+if black_surface is None or labeled_image is None:
+    raise FileNotFoundError("Görsellerden biri bulunamadı.")
+
+# Görsellerin aynı boyutta olduğundan emin olun
+if black_surface.shape != labeled_image.shape:
+    raise ValueError("Görseller aynı boyutta olmalı!")
+
+# Ortak pikselleri bul (Her iki görüntüde de aynı renk değerine sahip olan pikseller)
+common_pixels = cv2.bitwise_and(black_surface, labeled_image)
+
+# Visualize the result
+plt.figure(figsize=(10, 5))
+plt.imshow(cv2.cvtColor(common_pixels, cv2.COLOR_BGR2RGB)) 
+plt.title("Common Pixels")
+plt.axis("off")
+plt.show()
+
 
