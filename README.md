@@ -1,8 +1,9 @@
 # Detection and Naming of Intersections and Roads from Segmented Satellite Images
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/e2862e78-eae8-49f5-aa02-f2f2173b4b2b" width="400">
-  <img src="https://github.com/user-attachments/assets/f49d7df4-da3c-4912-9692-b8d63d9f8bba" width="400">
+  <img src="https://github.com/user-attachments/assets/e2862e78-eae8-49f5-aa02-f2f2173b4b2b" width="500">
+  <img src="https://github.com/user-attachments/assets/f49d7df4-da3c-4912-9692-b8d63d9f8bba" width="500">
+  <img src="https://github.com/user-attachments/assets/6018caa1-c153-4ce7-aa90-042d4d99d091" width="500">
 
 </p>
 
@@ -75,6 +76,6 @@ N-8 - Location: (220, 148)
 ```
 <img src="https://github.com/user-attachments/assets/ec896652-2d98-4be0-b0cf-a258f0c33489" width="400">
 
-
+### Step 4: Parsing and Naming Roads 
 ## License
 MIT
