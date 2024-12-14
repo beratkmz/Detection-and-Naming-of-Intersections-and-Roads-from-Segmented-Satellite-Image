@@ -240,7 +240,7 @@ print("Junctions:")
 for i, (x, y) in enumerate(merged_junction_points, start=1):
     print(f"N-{i} - Location: ({x}, {y})")
 
-# Sonuçları bir dosyaya kaydetmek isterseniz:
+# Save results to a file
 with open("junction_points.txt", "w") as f:
     for i, (x, y) in enumerate(merged_junction_points, start=1):
         f.write(f"N-{i} - Location: ({x}, {y})\n")
@@ -279,76 +279,70 @@ plt.show()
 8. Parsing and Naming Paths
 '''
 
-# Yeşil pikselleri (0, 255, 0) siyaha çevirme
+# Turn green pixels (0, 255, 0) to black
 mask_green = (final_skeleton[:, :, 1] == 255) & (final_skeleton[:, :, 0] == 0) & (final_skeleton[:, :, 2] == 0)
 final_skeleton[mask_green] = (0, 0, 0)
 
-# Güncellenmiş görseli kaydetmek isterseniz:
-# cv2.imwrite("updated_labeled_image.png", labeled_image)
-
-# Güncellenmiş görseli gri tona çevir
 labeled_image_gray = cv2.cvtColor(final_skeleton, cv2.COLOR_BGR2GRAY)
 
-# İkili bir maske oluştur (siyah ve beyaz)
 _, binary_image = cv2.threshold(labeled_image_gray, 1, 255, cv2.THRESH_BINARY)
 
-# Connected components analizi (çizgileri isimlendirme)
+# Connected components analysis (naming lines)
 num_labels, labels_im = cv2.connectedComponents(binary_image)
 
-# Etiketleri renklendirme
+# Color the labels
 label_hue = np.uint8(179 * labels_im / np.max(labels_im))
 blank_ch = 255 * np.ones_like(label_hue)
 colored_labels = cv2.merge([label_hue, blank_ch, blank_ch])
 colored_labels = cv2.cvtColor(colored_labels, cv2.COLOR_HSV2BGR)
-colored_labels[label_hue == 0] = 0  # Arka planı siyah yap
+colored_labels[label_hue == 0] = 0  
 
-# Çizgileri isimlendirme
-for label in range(1, num_labels):  # 0 arka plandır
+# Naming roads
+for label in range(1, num_labels):  
     mask = np.uint8(labels_im == label) * 255
     coords = cv2.findNonZero(mask)
     if coords is not None:
         x, y, w, h = cv2.boundingRect(coords)
-        center = (x + w // 2, y + h // 2)  # Merkez koordinat
+        center = (x + w // 2, y + h // 2)  # Center coordinate
         cv2.putText(colored_labels, f"R-{label}", center, 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
-# Sonucu görselleştir
+# Visualize the result
 plt.figure(figsize=(10, 10))
 plt.imshow(cv2.cvtColor(colored_labels, cv2.COLOR_BGR2RGB))
-plt.title("Labeled Lines After Removing Green Pixels")
+plt.title("Road Names")
 plt.axis("off")
 plt.show()
 
-# Yolların başlangıç ve bitiş noktalarını saklamak için bir sözlük
+# A dictionary to store the start and end points of paths
 line_endpoints = {}
 
-# Her bir etiket için işlem yap
-for label in range(1, num_labels):  # 0 arka plandır
-    # Etiket maskesini oluştur
+# Take action for each tag
+for label in range(1, num_labels):  
     mask = np.uint8(labels_im == label) * 255
-    coords = cv2.findNonZero(mask)  # Çizginin tüm piksel koordinatları
+    coords = cv2.findNonZero(mask)  # All pixel coordinates of the line
     
     if coords is not None:
-        # Minimum ve maksimum x, y değerlerini bul
+        # Find minimum and maximum x, y values
         min_x = np.min(coords[:, 0, 0])
         min_y = np.min(coords[:, 0, 1])
         max_x = np.max(coords[:, 0, 0])
         max_y = np.max(coords[:, 0, 1])
         
-        # Başlangıç ve bitiş noktalarını belirle
+        # Determine start and end points
         start_point = (min_x, min_y)
         end_point = (max_x, max_y)
         
-        # Sonuçları sakla
+        # Save results
         line_endpoints[f"R-{label}"] = {"start": start_point, "end": end_point}
 
-# Sonuçları yazdır
+# Print results
 for line, points in line_endpoints.items():
-    print(f"{line}: Başlangıç Noktası: {points['start']}, Bitiş Noktası: {points['end']}")
+    print(f"{line}: Starting Point: {points['start']}, Finishing Point: {points['end']}")
 
-# Sonuçları bir dosyaya kaydetmek isterseniz:
+# Save results to a file
 with open("line_endpoints.txt", "w") as f:
     for line, points in line_endpoints.items():
-        f.write(f"{line}: Başlangıç Noktası: {points['start']}, Bitiş Noktası: {points['end']}\n")
+        f.write(f"{line}: Starting Point: {points['start']}, Finishing Point: {points['end']}\n")
 
 
