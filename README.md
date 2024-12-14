@@ -77,5 +77,26 @@ N-8 - Location: (220, 148)
 <img src="https://github.com/user-attachments/assets/ec896652-2d98-4be0-b0cf-a258f0c33489" width="400">
 
 ### Step 4: Parsing and Naming Roads 
+
+At this stage, the image with the names and intersections was taken and the green pixels were separated. The reason for this is to make all the roads independent of the intersections and to visualize the road integrity one by one. Using the "connectedComponents" function in the OpenCV library, the system was made to recognize each separate road and then these roads were named and visualized.We also record the coordinates of the start and end points of the coordinates of these named roads.
+```sh
+R-1: Starting Point: (153, 2), Finishing Point: (210, 121)
+R-2: Starting Point: (548, 3), Finishing Point: (611, 58)
+R-3: Starting Point: (836, 3), Finishing Point: (877, 53)
+R-4: Starting Point: (1050, 2), Finishing Point: (1171, 93)
+R-5: Starting Point: (1188, 2), Finishing Point: (1247, 91)
+R-6: Starting Point: (630, 5), Finishing Point: (695, 54)
+R-7: Starting Point: (685, 4), Finishing Point: (821, 109)
+R-8: Starting Point: (252, 19), Finishing Point: (282, 85)
+...
+```
+<img src="https://github.com/user-attachments/assets/d8fa7c4f-76e3-46e8-bd9b-75bc78c9a230" width="400">
+
+### Bonus:
+The steps we have done so far were the steps to visualize the results. However, the purpose of this project is to access the intersection and road coordinates that work optimally for my graduation project, VTOL-based collapsed building detection and road map creation. For this purpose, there are sections at the end of step 3 and step 4 of the python code to turn these coordinates into a document. You can access the coordinate documents resulting from the sample images.
+- `junction_points.txt`
+- `line_endpoints.txt`
+
+
 ## License
 MIT
